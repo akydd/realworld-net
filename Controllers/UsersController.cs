@@ -18,10 +18,9 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost(Name = "RegisterUser")]
-    public IActionResult RegisterUser([FromBody] RegisterUserDto userDto)
+    public async Task<IActionResult> RegisterUser([FromBody] RegisterUserDto userDto)
     {
-        // Handle the user data here
-        var user = _userService.RegisterUserAsync(userDto).Result;
+        var user = await _userService.RegisterUserAsync(userDto);
         var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token, user.Username, user.Bio, user.Image));
         return Ok(userResponse);
     }

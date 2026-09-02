@@ -34,7 +34,7 @@ public class UserService : IUserService
         throw new NotImplementedException();
     }
 
-    public Task<User?> RegisterUserAsync(RegisterUserDto userDto)
+    public async Task<User> RegisterUserAsync(RegisterUserDto userDto)
     {
         var hashedPassword = _passwordHasher.HashPassword(userDto.User.Password);
         var newUser = new DbUser
@@ -44,15 +44,15 @@ public class UserService : IUserService
             PasswordHash = hashedPassword
         };
         _context.Users.Add(newUser);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         var token = _jwtService.GenerateToken(newUser.Id);
 
-        return Task.FromResult<User?>(new User
+        return new User
         {
             Username = newUser.Username,
             Email = newUser.Email,
             Token = token
-        });
+        };
     }
 }
