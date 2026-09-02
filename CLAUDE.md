@@ -37,5 +37,4 @@ Request flow is a conventional layered pipeline: **Controller → IUserService �
 ## Conventions & known rough edges
 
 - `dotnet ef` reads `appsettings.Development.json` for the connection string; the JWT secret also lives there. These are committed for local dev but should move to user-secrets/env before any real deployment.
-- `UsersController` currently calls `RegisterUserAsync(...).Result` (blocking on async) and `UserService.RegisterUserAsync` calls `SaveChanges()` synchronously — the interface is `Task`-returning, so prefer `await` when extending this.
-- Note the double-dot filename `Controllers/UsersController..cs` (typo in the name, not a code issue).
+- The request path is async end-to-end (`await`ed controller → `await SaveChangesAsync()`); keep new service methods genuinely async rather than blocking with `.Result`/`.Wait()`. `_context.Users.Add` stays synchronous by design — `AddAsync` is only needed for value generators like `HiLo`, not identity keys.
