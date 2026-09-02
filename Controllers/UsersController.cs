@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using realworld_net.Dtos;
-using realworld_net.Models;
 using realworld_net.Services;
 
 namespace realworld_net.Controllers;

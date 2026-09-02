@@ -20,6 +20,19 @@ dotnet ef database update         # apply migrations to the DB
 
 API docs (dev only): Scalar UI is served via `app.MapScalarApiReference()` — reachable at `/scalar` alongside the OpenAPI document at `/openapi/v1.json`. There is no test project yet.
 
+## Formatting & linting
+
+Style is codified in `.editorconfig` (file-scoped namespaces, `var` preferences, `I`-prefixed interfaces, `_camelCase` private fields, LF line endings, no BOM).
+
+```bash
+dotnet format                     # auto-fix formatting/style across the tree
+dotnet format --verify-no-changes # check-only (use in CI); non-zero exit if unformatted
+```
+
+The build enforces correctness, not style: `TreatWarningsAsErrors=true` (in the csproj) makes compiler/nullable, security (e.g. `NUxxxx`), and analyzer warnings **fail the build**, while formatting/style rules stay advisory — surfaced by `dotnet format` and the IDE, not the build. So `dotnet build` passing does not mean the code is formatted; run `dotnet format` before committing.
+
+EF's migration scaffolder emits block-scoped namespaces and a BOM, which don't match `.editorconfig`. Run `dotnet format` after `dotnet ef migrations add` to normalize the generated file.
+
 ## Architecture
 
 Request flow is a conventional layered pipeline: **Controller → IUserService → AppDbContext (EF Core / SQL Server)**, with two distinct `User` types on either side of the service boundary.
