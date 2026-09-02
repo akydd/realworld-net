@@ -1,5 +1,4 @@
 using EntityFramework.Exceptions.SqlServer;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
