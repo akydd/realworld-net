@@ -1,3 +1,7 @@
+using System.Globalization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using realworld_net.Dtos;
 using realworld_net.Services;
@@ -15,17 +19,29 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
+    [Authorize]
     [HttpGet(Name = "GetCurrentUser")]
-    public async Task<IActionResult> GetCurrentUser([FromHeader(Name = "Authorization")] string authorizationHeader)
+    public async Task<IActionResult> GetCurrentUser()
     {
-        if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Token "))
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        var token = await HttpContext.GetTokenAsync("access_token");
+        var user = await _userService.GetUserByIdAsync(userId);
+        if (user == null)
         {
-            return Unauthorized(new { Error = "Authorization header is missing or invalid." });
+            return NotFound(new { Error = "User not found." });
         }
+        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, token!, user.Username, user.Bio, user.Image));
+        return Ok(userResponse);
+    }
 
-        var token = authorizationHeader.Substring("Token ".Length).Trim();
-        var user = await _userService.GetCurrentUserAsync(token);
-        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token, user.Username, user.Bio, user.Image));
+    [Authorize]
+    [HttpPut(Name = "UpdateUser")]
+    public async Task<IActionResult> UpdateUser([FromBody] UpdateUserDto updateUserDto)
+    {
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        var token = await HttpContext.GetTokenAsync("access_token");
+        var user = await _userService.UpdateUserAsync(userId, updateUserDto);
+        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, token!, user.Username, user.Bio, user.Image));
         return Ok(userResponse);
     }
 }

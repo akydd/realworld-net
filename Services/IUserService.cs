@@ -10,5 +10,5 @@ public interface IUserService
     Task<User?> GetUserByEmailAsync(string email);
     Task<User> RegisterUserAsync(RegisterUserDto userDto);
     Task<User> LoginUserAsync(LoginUserDto userDto);
-    Task<User> GetCurrentUserAsync(string token);
+    Task<User> UpdateUserAsync(int userId, UpdateUserDto userDto);
 }

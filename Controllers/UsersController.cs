@@ -20,7 +20,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> RegisterUser([FromBody] RegisterUserDto userDto)
     {
         var user = await _userService.RegisterUserAsync(userDto);
-        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token, user.Username, user.Bio, user.Image));
+        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token!, user.Username, user.Bio, user.Image));
         return Ok(userResponse);
     }
 
@@ -28,7 +28,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> LoginUser([FromBody] LoginUserDto userDto)
     {
         var user = await _userService.LoginUserAsync(userDto);
-        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token, user.Username, user.Bio, user.Image));
+        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token!, user.Username, user.Bio, user.Image));
         return Ok(userResponse);
     }
 }

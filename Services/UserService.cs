@@ -20,9 +20,18 @@ public class UserService : IUserService
         _jwtService = jwtService;
     }
 
-    public Task<User?> GetUserByIdAsync(int id)
+    public async Task<User?> GetUserByIdAsync(int userId)
     {
-        throw new NotImplementedException();
+        var user = await _context.Users.FindAsync(userId);
+        return user == null
+            ? throw new UnauthorizedAccessException("User not found.")
+            : new User
+            {
+                Username = user.Username,
+                Email = user.Email,
+                Bio = user.Bio,
+                Image = user.Image
+            };
     }
 
     public Task<User?> GetUserByUsernameAsync(string username)
@@ -77,19 +86,8 @@ public class UserService : IUserService
         };
     }
 
-    public async Task<User> GetCurrentUserAsync(string token)
+    public async Task<User> UpdateUserAsync(int userId, UpdateUserDto userDto)
     {
-        var userId = _jwtService.ValidateToken(token) ?? throw new UnauthorizedAccessException("Invalid token.");
-        var user = await _context.Users.FindAsync(userId);
-        return user == null
-            ? throw new UnauthorizedAccessException("User not found.")
-            : new User
-            {
-                Username = user.Username,
-                Email = user.Email,
-                Token = token,
-                Bio = user.Bio,
-                Image = user.Image
-            };
+        throw new NotImplementedException();
     }
 }

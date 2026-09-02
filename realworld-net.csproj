@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="EntityFrameworkCore.Exceptions.SqlServer" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <!-- Override the vulnerable Microsoft.OpenApi 2.0.0 pulled in transitively (GHSA-v5pm-xwqc-g5wc). -->
     <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />

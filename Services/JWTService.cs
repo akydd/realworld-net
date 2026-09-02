@@ -24,42 +24,4 @@ public class JWTService : IJWTService
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
-
-    public int? ValidateToken(string token)
-    {
-        if (string.IsNullOrEmpty(token))
-        {
-            return null;
-        }
-
-        var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-        var secret = _configuration["JwtSettings:Secret"]
-            ?? throw new InvalidOperationException("JWT signing key 'JwtSettings:Secret' is not configured.");
-        var key = System.Text.Encoding.ASCII.GetBytes(secret);
-        try
-        {
-            tokenHandler.ValidateToken(token, new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(key),
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ClockSkew = TimeSpan.Zero
-            }, out var validatedToken);
-
-            var jwtToken = (System.IdentityModel.Tokens.Jwt.JwtSecurityToken)validatedToken;
-            var userIdClaim = jwtToken.Claims.FirstOrDefault(x => x.Type == "id");
-            if (userIdClaim == null)
-            {
-                return null;
-            }
-
-            return int.Parse(userIdClaim.Value, System.Globalization.CultureInfo.InvariantCulture);
-        }
-        catch
-        {
-            // Token validation failed
-            return null;
-        }
-    }
 }

@@ -1,6 +1,9 @@
+using System.Text;
 using EntityFramework.Exceptions.SqlServer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using realworld_net.Data;
 using realworld_net.Middleware;
 using realworld_net.Services;
@@ -52,6 +55,34 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
+// Custom JWT handling
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.Zero,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT secret not found in configuration.")))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var authorizationHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authorizationHeader) && authorizationHeader.StartsWith("Token "))
+                {
+                    context.Token = authorizationHeader.Substring("Token ".Length).Trim();
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
 var app = builder.Build();
 
 
@@ -66,7 +97,9 @@ app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
+app.UseAuthentication();
+
+// app.UseAuthorization();
 
 app.MapControllers();
 
