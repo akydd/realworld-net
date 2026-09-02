@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
 using realworld_net.Dtos;
 using realworld_net.Models;
@@ -54,5 +55,41 @@ public class UserService : IUserService
             Email = newUser.Email,
             Token = token
         };
+    }
+
+    public async Task<User> LoginUserAsync(LoginUserDto userDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userDto.User.Email);
+        if (user == null || !_passwordHasher.VerifyPassword(user.PasswordHash, userDto.User.Password))
+        {
+            throw new UnauthorizedAccessException("Invalid email or password.");
+        }
+
+        var token = _jwtService.GenerateToken(user.Id);
+
+        return new User
+        {
+            Username = user.Username,
+            Email = user.Email,
+            Token = token,
+            Bio = user.Bio,
+            Image = user.Image
+        };
+    }
+
+    public async Task<User> GetCurrentUserAsync(string token)
+    {
+        var userId = _jwtService.ValidateToken(token) ?? throw new UnauthorizedAccessException("Invalid token.");
+        var user = await _context.Users.FindAsync(userId);
+        return user == null
+            ? throw new UnauthorizedAccessException("User not found.")
+            : new User
+            {
+                Username = user.Username,
+                Email = user.Email,
+                Token = token,
+                Bio = user.Bio,
+                Image = user.Image
+            };
     }
 }

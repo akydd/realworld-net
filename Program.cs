@@ -25,6 +25,7 @@ builder.Services.AddControllers();
 
 // Custom exception handling middleware
 builder.Services.AddExceptionHandler<DuplicateExceptionHandler>();
+builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

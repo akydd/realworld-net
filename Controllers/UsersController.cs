@@ -23,4 +23,12 @@ public class UsersController : ControllerBase
         var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token, user.Username, user.Bio, user.Image));
         return Ok(userResponse);
     }
+
+    [HttpPost("login", Name = "LoginUser")]
+    public async Task<IActionResult> LoginUser([FromBody] LoginUserDto userDto)
+    {
+        var user = await _userService.LoginUserAsync(userDto);
+        var userResponse = new UserResponseDto(new UserResponseInnerDto(user.Email, user.Token, user.Username, user.Bio, user.Image));
+        return Ok(userResponse);
+    }
 }
