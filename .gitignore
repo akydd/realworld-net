@@ -1,0 +1,59 @@
+## .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+[Oo]ut/
+[Pp]ublish/
+*.dll
+*.exe
+*.pdb
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+## User-specific / IDE files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+*.swp
+
+## Rider / LSP
+.lsp/
+.rider/
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## ASP.NET Core / secrets
+*.mvc.dll
+appsettings.*.local.json
+secrets.json
+
+## macOS / editor cruft
+.DS_Store
+*~
+
+## Docker
+compose.yaml~
