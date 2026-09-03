@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using realworld_net.Data;
 using realworld_net.Middleware;
+using realworld_net.OpenApi;
 using realworld_net.Services;
 using Scalar.AspNetCore;
 
@@ -33,7 +34,11 @@ builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<SecuritySchemeDocumentTransformer>();
+    options.AddOperationTransformer<AuthorizeOperationTransformer>();
+});
 
 // Custom behaviour for validation errors
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -100,7 +105,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 
-// app.UseAuthorization();
+app.UseAuthorization();
 
 app.MapControllers();
 

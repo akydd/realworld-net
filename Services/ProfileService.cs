@@ -1,3 +1,4 @@
+using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
 using realworld_net.Models;
@@ -36,25 +37,19 @@ public class ProfileService : IProfileService
     {
         var userToFollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new Exception("User not found");
 
-        if (userToFollow.Id == currentUserId)
-        {
-            throw new Exception("You cannot follow yourself.");
-        }
-
-        var existingFollow = await _context.Follows.FirstOrDefaultAsync(f => f.FollowerId == currentUserId && f.FolloweeId == userToFollow.Id) ?? throw new Exception("You are already following this user.");
-        if (existingFollow != null)
-        {
-            throw new Exception("You are already following this user.");
-        }
-
-        var follow = new Entities.Follows
+        _context.Follows.Add(new Entities.Follows
         {
             FollowerId = currentUserId,
             FolloweeId = userToFollow.Id
-        };
-
-        _context.Follows.Add(follow);
-        await _context.SaveChangesAsync();
+        });
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (UniqueConstraintException)
+        {
+            // Do nothing, user is already following.
+        }
 
         return new Profile
         {
@@ -69,14 +64,8 @@ public class ProfileService : IProfileService
     {
         var userToUnfollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new Exception("User not found");
 
-        if (userToUnfollow.Id == currentUserId)
-        {
-            throw new Exception("You cannot unfollow yourself.");
-        }
-
-        var existingFollow = await _context.Follows.FirstOrDefaultAsync(f => f.FollowerId == currentUserId && f.FolloweeId == userToUnfollow.Id) ?? throw new Exception("You are not following this user.");
-        _context.Follows.Remove(existingFollow);
-        await _context.SaveChangesAsync();
+        await _context.Follows.Where(f => f.FollowerId == currentUserId && f.FolloweeId == userToUnfollow.Id)
+            .ExecuteDeleteAsync();
 
         return new Profile
         {

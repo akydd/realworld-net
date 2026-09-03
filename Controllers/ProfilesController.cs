@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using realworld_net.Dtos;
 using realworld_net.Services;
@@ -19,6 +22,34 @@ public class ProfilesController : ControllerBase
     public async Task<IActionResult> GetProfile(string username)
     {
         var profile = await _profileService.GetProfileByUsernameAsync(username, null);
+        if (profile == null)
+        {
+            return NotFound();
+        }
+        var profileResponse = new ProfileResponseDto(new ProfileResponseInnerDto(profile.Username, profile.Bio, profile.Image, profile.Following));
+        return Ok(profileResponse);
+    }
+
+    [Authorize]
+    [HttpPost("{username}/follow")]
+    public async Task<IActionResult> FollowUser(string username)
+    {
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        var profile = await _profileService.FollowUserAsync(username, userId);
+        if (profile == null)
+        {
+            return NotFound();
+        }
+        var profileResponse = new ProfileResponseDto(new ProfileResponseInnerDto(profile.Username, profile.Bio, profile.Image, profile.Following));
+        return Ok(profileResponse);
+    }
+
+    [Authorize]
+    [HttpDelete("{username}/follow")]
+    public async Task<IActionResult> UnfollowUser(string username)
+    {
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        var profile = await _profileService.UnfollowUserAsync(username, userId);
         if (profile == null)
         {
             return NotFound();
