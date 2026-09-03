@@ -88,6 +88,38 @@ public class UserService : IUserService
 
     public async Task<User> UpdateUserAsync(int userId, UpdateUserDto userDto)
     {
-        throw new NotImplementedException();
+        var innerDto = userDto.User;
+        var userToUpdate = await _context.Users.FindAsync(userId) ?? throw new UnauthorizedAccessException("User not found.");
+
+        if (innerDto.Bio != null)
+        {
+            userToUpdate.Bio = innerDto.Bio;
+        }
+        if (innerDto.Image != null)
+        {
+            userToUpdate.Image = innerDto.Image;
+        }
+        if (innerDto.Username != null)
+        {
+            userToUpdate.Username = innerDto.Username;
+        }
+        if (innerDto.Email != null)
+        {
+            userToUpdate.Email = innerDto.Email;
+        }
+        if (innerDto.Password != null)
+        {
+            userToUpdate.PasswordHash = _passwordHasher.HashPassword(innerDto.Password);
+        }
+
+        await _context.SaveChangesAsync();
+
+        return new User
+        {
+            Username = userToUpdate.Username,
+            Email = userToUpdate.Email,
+            Bio = userToUpdate.Bio,
+            Image = userToUpdate.Image
+        };
     }
 }
