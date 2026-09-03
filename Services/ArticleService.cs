@@ -77,6 +77,35 @@ public class ArticleService : IArticleService
              .FirstOrDefaultAsync();
     }
 
+    public async Task<Article> UpdateArticleAsync(int userId, string slug, UpdateArticleDto articleDto)
+    {
+        var innerDto = articleDto.Article;
+
+        var articleToUpdate = await _context.Articles
+            .Where(a => a.Slug == slug && a.AuthorId == userId)
+            .FirstOrDefaultAsync() ?? throw new UnauthorizedAccessException("You are not authorized to update this article.");
+
+        if (innerDto.Title != null)
+        {
+            articleToUpdate.Title = innerDto.Title;
+            articleToUpdate.Slug = GenerateSlug(innerDto.Title);
+        }
+
+        if (innerDto.Description != null)
+        {
+            articleToUpdate.Description = innerDto.Description;
+        }
+
+        if (innerDto.Body != null)
+        {
+            articleToUpdate.Body = innerDto.Body;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return await GetArticleBySlugAsync(articleToUpdate.Slug, userId) ?? throw new Exception("Article not found after update.");
+    }
+
     private string GenerateSlug(string title)
     {
         return title.ToLower().Replace(' ', '-');

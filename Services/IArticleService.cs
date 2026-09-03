@@ -7,4 +7,5 @@ public interface IArticleService
 {
     Task<Article> CreateArticleAsync(int userId, CreateArticleDto articleDto);
     Task<Article?> GetArticleBySlugAsync(string slug, int? userId);
+    Task<Article> UpdateArticleAsync(int userId, string slug, UpdateArticleDto articleDto);
 }
