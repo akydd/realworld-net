@@ -34,9 +34,18 @@ public class UserService : IUserService
             };
     }
 
-    public Task<User?> GetUserByUsernameAsync(string username)
+    public async Task<User?> GetUserByUsernameAsync(string username)
     {
-        throw new NotImplementedException();
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        return user == null
+            ? throw new UnauthorizedAccessException("User not found.")
+            : new User
+            {
+                Username = user.Username,
+                Email = user.Email,
+                Bio = user.Bio,
+                Image = user.Image
+            };
     }
 
     public Task<User?> GetUserByEmailAsync(string email)
