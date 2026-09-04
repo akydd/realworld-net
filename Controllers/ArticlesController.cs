@@ -25,26 +25,7 @@ public class ArticlesController : ControllerBase
         var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
         var createdArticle = await _articleService.CreateArticleAsync(userId, articleDto);
 
-        var responseDto = new ArticleSingleResponseDto(
-            new ArticleSingleInnerDto(
-                createdArticle.Slug,
-                createdArticle.Title,
-                createdArticle.Description,
-                createdArticle.Body,
-                new List<string>(), // Assuming you have a way to get tags
-                createdArticle.CreatedAt,
-                createdArticle.UpdatedAt,
-                false, // Assuming you have a way to determine if favorited
-                0, // Assuming you have a way to get favorites count
-                new ProfileResponseInnerDto(
-                    createdArticle.Author.Username,
-                    createdArticle.Author.Bio,
-                    createdArticle.Author.Image,
-                    createdArticle.Author.Following
-                )
-            )
-        );
-
+        var responseDto = toDto(createdArticle);
         return Ok(responseDto);
     }
 
@@ -57,26 +38,7 @@ public class ArticlesController : ControllerBase
             return NotFound();
         }
 
-        var responseDto = new ArticleSingleResponseDto(
-            new ArticleSingleInnerDto(
-                article.Slug,
-                article.Title,
-                article.Description,
-                article.Body,
-                new List<string>(), // Assuming you have a way to get tags
-                article.CreatedAt,
-                article.UpdatedAt,
-                false, // Assuming you have a way to determine if favorited
-                0, // Assuming you have a way to get favorites count
-                new ProfileResponseInnerDto(
-                    article.Author.Username,
-                    article.Author.Bio,
-                    article.Author.Image,
-                    article.Author.Following
-                )
-            )
-        );
-
+        var responseDto = toDto(article);
         return Ok(responseDto);
     }
 
@@ -85,31 +47,67 @@ public class ArticlesController : ControllerBase
     public async Task<IActionResult> UpdateArticle(string slug, [FromBody] UpdateArticleDto articleDto)
     {
         var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
-        var updatedArticle = _articleService.UpdateArticleAsync(userId, slug, articleDto);
+        var updatedArticle = await _articleService.UpdateArticleAsync(userId, slug, articleDto);
         if (updatedArticle == null)
         {
             return NotFound();
         }
 
-        var responseDto = new ArticleSingleResponseDto(
-            new ArticleSingleInnerDto(
-                updatedArticle.Result.Slug,
-                updatedArticle.Result.Title,
-                updatedArticle.Result.Description,
-                updatedArticle.Result.Body,
-                new List<string>(), // Assuming you have a way to get tags
-                updatedArticle.Result.CreatedAt,
-                updatedArticle.Result.UpdatedAt,
-                false, // Assuming you have a way to determine if favorited
-                0, // Assuming you have a way to get favorites count
-                new ProfileResponseInnerDto(
-                    updatedArticle.Result.Author.Username,
-                    updatedArticle.Result.Author.Bio,
-                    updatedArticle.Result.Author.Image,
-                    updatedArticle.Result.Author.Following
-                )
-            )
-        );
+        var responseDto = toDto(updatedArticle);
         return Ok(responseDto);
+    }
+
+    [Authorize]
+    [HttpPost("{slug}/favorite", Name = "Favorite Article")]
+    public async Task<IActionResult> FavoriteArticle(string slug)
+    {
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        var updatedArticle = await _articleService.FavoriteArticleAsync(userId, slug);
+        if (updatedArticle == null)
+        {
+            return NotFound();
+        }
+
+        var responseDto = toDto(updatedArticle);
+        return Ok(responseDto);
+    }
+
+    private static ArticleSingleResponseDto toDto(Models.Article updatedArticle)
+    {
+        var responseDto = new ArticleSingleResponseDto(
+                    new ArticleSingleInnerDto(
+                        updatedArticle.Slug,
+                        updatedArticle.Title,
+                        updatedArticle.Description,
+                        updatedArticle.Body,
+                        new List<string>(), // Assuming you have a way to get tags
+                        updatedArticle.CreatedAt,
+                        updatedArticle.UpdatedAt,
+                        updatedArticle.Favorited,
+                        updatedArticle.FavoritesCount,
+                        new ProfileResponseInnerDto(
+                            updatedArticle.Author.Username,
+                            updatedArticle.Author.Bio,
+                            updatedArticle.Author.Image,
+                            updatedArticle.Author.Following
+                        )
+
+                    ));
+        return responseDto;
+    }
+
+    [Authorize]
+    [HttpDelete("{slug}/favorite", Name = "Unfavorite Article")]
+    public async Task<IActionResult> UnfavoriteArticle(string slug)
+    {
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        var updatedArticle = await _articleService.UnfavoriteArticleAsync(userId, slug);
+        if (updatedArticle == null)
+        {
+            return NotFound();
+        }
+        var responseDto = toDto(updatedArticle);
+        return Ok(responseDto);
+
     }
 }

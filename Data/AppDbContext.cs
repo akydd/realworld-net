@@ -12,7 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<Follows> Follows { get; set; }
     public DbSet<Article> Articles { get; set; }
-
+    public DbSet<Favorites> Favorites { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -28,6 +28,19 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(f => f.FolloweeId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Favorites>(b =>
+        {
+            b.HasOne(f => f.User)
+                .WithMany()
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(f => f.Article)
+                .WithMany()
+                .HasForeignKey(f => f.ArticleId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

@@ -54,6 +54,36 @@ public class ArticleService : IArticleService
             .FirstAsync();
     }
 
+    public async Task<Article> FavoriteArticleAsync(int userId, string slug)
+    {
+        var article = await _context.Articles
+            .Where(a => a.Slug == slug)
+            .FirstOrDefaultAsync() ?? throw new Exception("Article not found.");
+
+        var alreadyFavorited = await _context.Favorites
+            .AnyAsync(f => f.UserId == userId && f.ArticleId == article.Id);
+
+        if (!alreadyFavorited)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            _context.Favorites.Add(new Entities.Favorites
+            {
+                UserId = userId,
+                ArticleId = article.Id
+            });
+
+            await _context.Articles
+                .Where(a => a.Slug == slug)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(a => a.FavoritesCount, a => a.FavoritesCount + 1));
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+
+        return await GetArticleBySlugAsync(slug, userId) ?? throw new Exception("Article not found after favoriting.");
+    }
+
     public async Task<Article?> GetArticleBySlugAsync(string slug, int? userId)
     {
         return await _context.Articles
@@ -66,6 +96,8 @@ public class ArticleService : IArticleService
                 Body = a.Body,
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
+                FavoritesCount = a.FavoritesCount,
+                Favorited = userId != null && _context.Favorites.Any(f => f.UserId == userId && f.ArticleId == a.Id),
                 Author = new Profile
                 {
                     Username = a.Author.Username,
@@ -75,6 +107,30 @@ public class ArticleService : IArticleService
                 }
             })
              .FirstOrDefaultAsync();
+    }
+
+    public async Task<Article> UnfavoriteArticleAsync(int userId, string slug)
+    {
+        var article = _context.Articles
+            .Where(a => a.Slug == slug)
+            .FirstOrDefault() ?? throw new Exception("Article not found.");
+
+        var isFavorited = await _context.Favorites
+            .AnyAsync(f => f.UserId == userId && f.ArticleId == article.Id);
+
+        if (isFavorited)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            _context.Favorites.RemoveRange(_context.Favorites.Where(f => f.UserId == userId && f.ArticleId == article.Id));
+            await _context.Articles
+              .Where(a => a.Slug == slug)
+              .ExecuteUpdateAsync(update => update
+                  .SetProperty(a => a.FavoritesCount, a => a.FavoritesCount - 1));
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+
+        return await GetArticleBySlugAsync(slug, userId) ?? throw new Exception("Article not found after unfavoriting.");
     }
 
     public async Task<Article> UpdateArticleAsync(int userId, string slug, UpdateArticleDto articleDto)
