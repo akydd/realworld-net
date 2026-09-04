@@ -119,4 +119,30 @@ public class ArticlesController : ControllerBase
         await _articleService.DeleteArticleAsync(userId, slug);
         return Ok();
     }
+
+    [HttpGet(Name = "List Articles")]
+    public async Task<IActionResult> ListArticles([FromQuery] ArticleFilter filter)
+    {
+        int? userId = int.TryParse(User.FindFirstValue("id"), out var id) ? id : null;
+        var articles = await _articleService.ListArticles(filter, userId);
+
+        var responseDto = new ArticleMultipleDto(articles.Articles.Select(a => new ArticleMultipleInnerDto(
+            a.Slug,
+            a.Title,
+            a.Description,
+            new List<string>(),
+            a.CreatedAt,
+            a.UpdatedAt,
+            a.Favorited,
+            a.FavoritesCount,
+            new ProfileResponseInnerDto(
+                a.Author.Username,
+                a.Author.Bio,
+                a.Author.Image,
+                a.Author.Following
+            )
+        )).ToList(), articles.ArticlesCount);
+
+        return Ok(responseDto);
+    }
 }

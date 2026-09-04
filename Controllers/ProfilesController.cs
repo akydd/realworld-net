@@ -21,7 +21,8 @@ public class ProfilesController : ControllerBase
     [HttpGet("{username}")]
     public async Task<IActionResult> GetProfile(string username)
     {
-        var profile = await _profileService.GetProfileByUsernameAsync(username, null);
+        int? userId = int.TryParse(User.FindFirstValue("id"), out var id) ? id : null;
+        var profile = await _profileService.GetProfileByUsernameAsync(username, userId);
         if (profile == null)
         {
             return NotFound();

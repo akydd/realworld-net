@@ -119,6 +119,47 @@ public class ArticleService : IArticleService
              .FirstOrDefaultAsync();
     }
 
+    public async Task<ArticleFeed> ListArticles(ArticleFilter filter, int? userId)
+    {
+        var query = _context.Articles.AsQueryable();
+
+        if (filter.Author is not null)
+        {
+            query = query.Where(a => a.Author.Username == filter.Author);
+        }
+
+        if (filter.FavoritedBy is not null)
+        {
+            query = query.Where(a => _context.Favorites.Any(f => f.ArticleId == a.Id && f.User.Username == filter.FavoritedBy));
+        }
+
+        var total = await query.CountAsync();
+        var articles = await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Select(a => new ArticleFeedItem(
+                a.Slug,
+                a.Title,
+                a.Description,
+                new List<String>(),
+                a.CreatedAt,
+                a.UpdatedAt,
+                userId != null && _context.Favorites.Any(f => f.ArticleId == a.Id && f.UserId == userId),
+                a.FavoritesCount,
+                new Profile
+                {
+                    Username = a.Author.Username,
+                    Bio = a.Author.Bio,
+                    Image = a.Author.Image,
+                    Following = userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
+                }
+            ))
+            .Skip(filter.Offset)
+            .Take(filter.Limit)
+            .ToListAsync();
+
+        return new ArticleFeed(articles, total);
+    }
+
     public async Task<Article> UnfavoriteArticleAsync(int userId, string slug)
     {
         var article = _context.Articles
