@@ -26,12 +26,13 @@ public class UserService : IUserService
         return user == null
             ? throw new UnauthorizedAccessException("User not found.")
             : new User
-            {
-                Username = user.Username,
-                Email = user.Email,
-                Bio = user.Bio,
-                Image = user.Image
-            };
+            (
+                user.Username,
+                user.Email,
+                null,
+                user.Bio,
+                user.Image
+            );
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username)
@@ -40,12 +41,13 @@ public class UserService : IUserService
         return user == null
             ? throw new UnauthorizedAccessException("User not found.")
             : new User
-            {
-                Username = user.Username,
-                Email = user.Email,
-                Bio = user.Bio,
-                Image = user.Image
-            };
+            (
+                user.Username,
+                user.Email,
+                null,
+                user.Bio,
+                user.Image
+            );
     }
 
     public Task<User?> GetUserByEmailAsync(string email)
@@ -68,11 +70,13 @@ public class UserService : IUserService
         var token = _jwtService.GenerateToken(newUser.Id);
 
         return new User
-        {
-            Username = newUser.Username,
-            Email = newUser.Email,
-            Token = token
-        };
+        (
+            newUser.Username,
+            newUser.Email,
+            token,
+            null,
+            null
+        );
     }
 
     public async Task<User> LoginUserAsync(LoginUserDto userDto)
@@ -86,13 +90,13 @@ public class UserService : IUserService
         var token = _jwtService.GenerateToken(user.Id);
 
         return new User
-        {
-            Username = user.Username,
-            Email = user.Email,
-            Token = token,
-            Bio = user.Bio,
-            Image = user.Image
-        };
+        (
+            user.Username,
+            user.Email,
+            token,
+            user.Bio,
+            user.Image
+        );
     }
 
     public async Task<User> UpdateUserAsync(int userId, UpdateUserDto userDto)
@@ -124,11 +128,12 @@ public class UserService : IUserService
         await _context.SaveChangesAsync();
 
         return new User
-        {
-            Username = userToUpdate.Username,
-            Email = userToUpdate.Email,
-            Bio = userToUpdate.Bio,
-            Image = userToUpdate.Image
-        };
+        (
+            userToUpdate.Username,
+            userToUpdate.Email,
+            null,
+            userToUpdate.Bio,
+            userToUpdate.Image
+        );
     }
 }
