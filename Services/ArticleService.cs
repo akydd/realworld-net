@@ -54,6 +54,16 @@ public class ArticleService : IArticleService
             .FirstAsync();
     }
 
+    public async Task DeleteArticleAsync(int userId, string slug)
+    {
+        var articleToDelete = await _context.Articles
+            .Where(a => a.Slug == slug && a.AuthorId == userId)
+            .FirstOrDefaultAsync() ?? throw new UnauthorizedAccessException("You are not authorized to delete this article.");
+
+        _context.Remove(articleToDelete);
+        await _context.SaveChangesAsync();
+    }
+
     public async Task<Article> FavoriteArticleAsync(int userId, string slug)
     {
         var article = await _context.Articles

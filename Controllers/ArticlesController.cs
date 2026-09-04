@@ -110,4 +110,13 @@ public class ArticlesController : ControllerBase
         return Ok(responseDto);
 
     }
+
+    [Authorize]
+    [HttpDelete("{slug}", Name = "Delete Article")]
+    public async Task<IActionResult> DeleteArticle(string slug)
+    {
+        var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);
+        await _articleService.DeleteArticleAsync(userId, slug);
+        return Ok();
+    }
 }

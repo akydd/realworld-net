@@ -10,4 +10,5 @@ public interface IArticleService
     Task<Article> UpdateArticleAsync(int userId, string slug, UpdateArticleDto articleDto);
     Task<Article> FavoriteArticleAsync(int userId, string slug);
     Task<Article> UnfavoriteArticleAsync(int userId, string slug);
+    Task DeleteArticleAsync(int userId, string slug);
 }
