@@ -1,9 +1,3 @@
 namespace realworld_net.Models;
 
-public class Profile
-{
-    public string Username { get; set; } = string.Empty;
-    public string? Bio { get; set; }
-    public string? Image { get; set; }
-    public bool Following { get; set; }
-}
+public record Profile(string Username, string? Bio, string? Image, bool Following);

@@ -25,12 +25,12 @@ public class ProfileService : IProfileService
         }
 
         return new Profile
-        {
-            Username = user.Username,
-            Bio = user.Bio,
-            Image = user.Image,
-            Following = isFollowing
-        };
+        (
+            user.Username,
+            user.Bio,
+            user.Image,
+            isFollowing
+        );
     }
 
     public async Task<Profile> FollowUserAsync(string username, int currentUserId)
@@ -52,12 +52,12 @@ public class ProfileService : IProfileService
         }
 
         return new Profile
-        {
-            Username = userToFollow.Username,
-            Bio = userToFollow.Bio,
-            Image = userToFollow.Image,
-            Following = true
-        };
+        (
+            userToFollow.Username,
+            userToFollow.Bio,
+            userToFollow.Image,
+            true
+        );
     }
 
     public async Task<Profile> UnfollowUserAsync(string username, int currentUserId)
@@ -68,11 +68,11 @@ public class ProfileService : IProfileService
             .ExecuteDeleteAsync();
 
         return new Profile
-        {
-            Username = userToUnfollow.Username,
-            Bio = userToUnfollow.Bio,
-            Image = userToUnfollow.Image,
-            Following = false
-        };
+        (
+            userToUnfollow.Username,
+            userToUnfollow.Bio,
+            userToUnfollow.Image,
+            false
+        );
     }
 }

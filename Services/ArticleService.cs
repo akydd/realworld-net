@@ -44,12 +44,12 @@ public class ArticleService : IArticleService
                 CreatedAt = a.CreatedAt,
                 UpdatedAt = a.UpdatedAt,
                 Author = new Profile
-                {
-                    Username = a.Author.Username,
-                    Bio = a.Author.Bio,
-                    Image = a.Author.Image,
-                    Following = false
-                }
+                (
+                    a.Author.Username,
+                    a.Author.Bio,
+                    a.Author.Image,
+                    false
+                )
             })
             .FirstAsync();
     }
@@ -109,12 +109,12 @@ public class ArticleService : IArticleService
                 FavoritesCount = a.FavoritesCount,
                 Favorited = userId != null && _context.Favorites.Any(f => f.UserId == userId && f.ArticleId == a.Id),
                 Author = new Profile
-                {
-                    Username = a.Author.Username,
-                    Bio = a.Author.Bio,
-                    Image = a.Author.Image,
-                    Following = userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
-                }
+                (
+                    a.Author.Username,
+                    a.Author.Bio,
+                    a.Author.Image,
+                    userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
+                )
             })
              .FirstOrDefaultAsync();
     }
@@ -146,12 +146,12 @@ public class ArticleService : IArticleService
                 userId != null && _context.Favorites.Any(f => f.ArticleId == a.Id && f.UserId == userId),
                 a.FavoritesCount,
                 new Profile
-                {
-                    Username = a.Author.Username,
-                    Bio = a.Author.Bio,
-                    Image = a.Author.Image,
-                    Following = userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
-                }
+                (
+                    a.Author.Username,
+                    a.Author.Bio,
+                    a.Author.Image,
+                    userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
+                )
             ))
             .Skip(filter.Offset)
             .Take(filter.Limit)
