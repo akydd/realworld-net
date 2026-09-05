@@ -1,4 +1,8 @@
 <Solution>
-  <Project Path="realworld-net.csproj" />
-  <Project Path="realworld-net.Tests/realworld-net.Tests.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/realworld-net/realworld-net.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/realworld-net.Tests/realworld-net.Tests.csproj" />
+  </Folder>
 </Solution>

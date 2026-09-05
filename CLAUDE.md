@@ -4,21 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-An ASP.NET Core (net10.0) implementation of the [RealWorld](https://realworld-docs.netlify.app/) ("Conduit") backend API. Early-stage: only user registration is wired end-to-end. The project deliberately uses a hand-rolled `User` table + JWT rather than ASP.NET Core Identity's `IdentityDbContext`; see `README.md` ("Design decisions") for the full rationale.
+An ASP.NET Core (net10.0) implementation of the [RealWorld](https://realworld-docs.netlify.app/) ("Conduit") backend API. Users, profiles (with following), and articles (with favorites) are implemented; comments, tags, and the personal feed are not yet built. The project deliberately uses a hand-rolled `User` table + JWT rather than ASP.NET Core Identity's `IdentityDbContext`; see `README.md` ("Design decisions") for the full rationale.
+
+The repo is a solution (`realworld-net.slnx`) with the app under `src/realworld-net/` and an xUnit test project under `tests/realworld-net.Tests/`.
 
 ## Commands
 
 The SQL Server database must be running before the app or migrations will work.
 
+Solution-level commands (`dotnet build`, `dotnet test`, `dotnet format`) run from the repo root; `docker compose` runs from root (where `compose.yaml` lives); `dotnet run`/`dotnet ef` target the app project under `src/realworld-net`.
+
 ```bash
 docker compose up -d          # start SQL Server 2022 on localhost:1433 (sa / P@ssword)
-dotnet run                    # run the API (http://localhost:5268, https://localhost:7215)
-dotnet build                  # build
-dotnet ef migrations add <Name>   # create a migration after changing entities
-dotnet ef database update         # apply migrations to the DB
+dotnet build                  # build the whole solution
+dotnet test                   # run the xUnit test project
+dotnet run --project src/realworld-net                          # run the API (http://localhost:5268, https://localhost:7215)
+dotnet ef migrations add <Name> --project src/realworld-net     # create a migration after changing entities
+dotnet ef database update --project src/realworld-net           # apply migrations to the DB
 ```
 
-API docs (dev only): Scalar UI is served via `app.MapScalarApiReference()` — reachable at `/scalar` alongside the OpenAPI document at `/openapi/v1.json`. There is no test project yet.
+API docs (dev only): Scalar UI is served via `app.MapScalarApiReference()` — reachable at `/scalar` alongside the OpenAPI document at `/openapi/v1.json`. The test project (`tests/realworld-net.Tests`) is scaffolded but not yet populated with tests.
 
 ## Formatting & linting
 
@@ -49,5 +54,5 @@ Request flow is a conventional layered pipeline: **Controller → IUserService �
 
 ## Conventions & known rough edges
 
-- `dotnet ef` reads `appsettings.Development.json` for the connection string; the JWT secret also lives there. These are committed for local dev but should move to user-secrets/env before any real deployment.
+- `dotnet ef` reads `src/realworld-net/appsettings.Development.json` for the connection string; the JWT secret also lives there. These are committed for local dev but should move to user-secrets/env before any real deployment.
 - The request path is async end-to-end (`await`ed controller → `await SaveChangesAsync()`); keep new service methods genuinely async rather than blocking with `.Result`/`.Wait()`. `_context.Users.Add` stays synchronous by design — `AddAsync` is only needed for value generators like `HiLo`, not identity keys.

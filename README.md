@@ -25,19 +25,21 @@ A backend implementation of the [RealWorld](https://realworld-docs.netlify.app/)
 SQL Server must be running before the app or EF migrations will work.
 
 ```bash
-docker compose up -d        # SQL Server 2022 on localhost:1433
-dotnet ef database update   # apply migrations
-dotnet run                  # http://localhost:5268, https://localhost:7215
+docker compose up -d                              # SQL Server 2022 on localhost:1433 (from repo root)
+dotnet ef database update --project src/realworld-net   # apply migrations
+dotnet run --project src/realworld-net            # http://localhost:5268, https://localhost:7215
 ```
+
+The solution-level commands — `dotnet build`, `dotnet test`, `dotnet format` — run from the repo root. `docker compose` also runs from the root (that's where `compose.yaml` lives), while `dotnet run` and `dotnet ef` target the app project under `src/realworld-net`.
 
 In development, the OpenAPI document is served at `/openapi/v1.json` and the interactive **Scalar UI at `/scalar`** — the easiest way to explore and exercise the endpoints.
 
 ### Configuration & secrets
 
-Local settings (connection string, JWT signing key) live in `appsettings.Development.json` for convenience. The JWT secret there is a placeholder; for anything beyond local dev, move it out of source with [user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets):
+Local settings (connection string, JWT signing key) live in `src/realworld-net/appsettings.Development.json` for convenience. The JWT secret there is a placeholder; for anything beyond local dev, move it out of source with [user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets):
 
 ```bash
-dotnet user-secrets set "JwtSettings:Secret" "<a-long-random-key>"
+dotnet user-secrets set "JwtSettings:Secret" "<a-long-random-key>" --project src/realworld-net
 ```
 
 ## API
@@ -67,14 +69,16 @@ The API follows the [RealWorld endpoint spec](https://realworld-docs.netlify.app
 ## Project structure
 
 ```
-Controllers/   HTTP endpoints (Users, User, Profiles, Articles)
-Services/      Business logic; each service is interface-backed and injected with the DbContext
-Entities/      EF Core-mapped classes (User, Article, Follows, Favorites, Auditable base)
-Models/        API-facing DTOs returned by services (records)
-Dtos/          Request/response payload shapes matching the RealWorld JSON contract
-Middleware/    Global exception handlers (IExceptionHandler)
-Data/          AppDbContext (change-tracked timestamps, relationship config)
-Migrations/    EF Core migrations
+src/realworld-net/            The API project
+  Controllers/   HTTP endpoints (Users, User, Profiles, Articles)
+  Services/      Business logic; each service is interface-backed and injected with the DbContext
+  Entities/      EF Core-mapped classes (User, Article, Follows, Favorites, Auditable base)
+  Models/        API-facing DTOs returned by services (records)
+  Dtos/          Request/response payload shapes matching the RealWorld JSON contract
+  Middleware/    Global exception handlers (IExceptionHandler)
+  Data/          AppDbContext (change-tracked timestamps, relationship config)
+  Migrations/    EF Core migrations
+tests/realworld-net.Tests/    Test project (xUnit)
 ```
 
 The request flow is a conventional layered pipeline: **Controller → `IXxxService` → `AppDbContext` (EF Core / SQL Server)**. Services return `Models` DTOs (never entities), and read paths use LINQ **projections** so only the needed columns are queried.
