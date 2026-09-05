@@ -36,21 +36,24 @@ public class ArticleService : IArticleService
         return await _context.Articles
             .Where(a => a.Id == article.Id)
             .Select(a => new Article
-            {
-                Slug = a.Slug,
-                Title = a.Title,
-                Description = a.Description,
-                Body = a.Body,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt,
-                Author = new Profile
+            (
+                a.Slug,
+                a.Title,
+                a.Description,
+                a.Body,
+                new List<string>(),
+                a.CreatedAt,
+                a.UpdatedAt,
+                false,
+                0,
+                new Profile
                 (
                     a.Author.Username,
                     a.Author.Bio,
                     a.Author.Image,
                     false
                 )
-            })
+            ))
             .FirstAsync();
     }
 
@@ -99,23 +102,24 @@ public class ArticleService : IArticleService
         return await _context.Articles
             .Where(a => a.Slug == slug)
             .Select(a => new Article
-            {
-                Slug = a.Slug,
-                Title = a.Title,
-                Description = a.Description,
-                Body = a.Body,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt,
-                FavoritesCount = a.FavoritesCount,
-                Favorited = userId != null && _context.Favorites.Any(f => f.UserId == userId && f.ArticleId == a.Id),
-                Author = new Profile
+            (
+                a.Slug,
+                a.Title,
+                a.Description,
+                a.Body,
+                new List<string>(),
+                a.CreatedAt,
+                a.UpdatedAt,
+                userId != null && _context.Favorites.Any(f => f.UserId == userId && f.ArticleId == a.Id),
+                a.FavoritesCount,
+                new Profile
                 (
                     a.Author.Username,
                     a.Author.Bio,
                     a.Author.Image,
                     userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
                 )
-            })
+            ))
              .FirstOrDefaultAsync();
     }
 
