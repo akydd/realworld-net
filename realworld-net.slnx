@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="realworld-net.csproj" />
+  <Project Path="realworld-net.Tests/realworld-net.Tests.csproj" />
 </Solution>
