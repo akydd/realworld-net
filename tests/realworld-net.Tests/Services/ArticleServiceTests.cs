@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Dtos;
+using realworld_net.Entities;
 using realworld_net.Services;
 
 namespace realworld_net.Tests.Services;
@@ -61,6 +62,84 @@ public class ArticleServiceTests : IAsyncLifetime
         Assert.True(articleExists);
     }
 
+    [Fact]
+    public async Task FavoriteArticleAsync_SucceedsWhenArticleExists()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        var fav = await service.FavoriteArticleAsync(user.Id, article.Slug);
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var updatedArticle = await assertContext.Articles.SingleAsync(a => a.Slug == article.Slug);
+        Assert.Equal(1, updatedArticle.FavoritesCount);
+
+        var favRecordExists = await assertContext.Favorites.AnyAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);
+        Assert.True(favRecordExists);
+    }
+
+    [Fact]
+    public async Task FavoriteArticleAsync_Idempotent()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+        // await SeedFavorite(user.Id, article.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        var fav = await service.FavoriteArticleAsync(user.Id, article.Slug);
+        Assert.Equal(1, fav.FavoritesCount);
+        // And again
+        var fav2 = await service.FavoriteArticleAsync(user.Id, article.Slug);
+        Assert.Equivalent(fav, fav2);
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var updatedArticle = await assertContext.Articles.SingleAsync(a => a.Slug == article.Slug);
+        Assert.Equal(1, updatedArticle.FavoritesCount);
+
+        var favRecordExists = await assertContext.Favorites.AnyAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);
+        Assert.True(favRecordExists);
+    }
+
+    [Fact]
+    public async Task GetArticleBySlugAsync_SucceedsWhenArticleExists_NoAuth()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        var foundArticle = service.GetArticleBySlugAsync(article.Slug, null);
+        Assert.Equivalent(article, foundArticle);
+    }
+
+    [Fact]
+    public async Task GetArticleBySlugAsync_SucceedsWhenArticleExists_Auth()
+    {
+        var author = await SeedUserAsync("Joe");
+        var user = await SeedUserAsync("Mo");
+        var article = await SeedArticleAsync(author.Id);
+
+        // Make the user follow the author, and also fav this article.
+        await SeedFavorite(user.Id, article.Id);
+        await SeedFollows(user.Id, author.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        var foundArticle = await service.GetArticleBySlugAsync(article.Slug, user.Id);
+        Assert.NotNull(foundArticle);
+        Assert.Equal(article.Slug, foundArticle.Slug);
+        Assert.True(foundArticle.Author.Following);
+        Assert.True(foundArticle.Favorited);
+        Assert.Equal(1, foundArticle.FavoritesCount);
+    }
+
     public Task DisposeAsync() => Task.CompletedTask;
     public async Task InitializeAsync() => await _dbFixture.ResetAsync();
 
@@ -92,5 +171,34 @@ public class ArticleServiceTests : IAsyncLifetime
         context.Articles.Add(article);
         await context.SaveChangesAsync();
         return article;
+    }
+
+    private async Task<Entities.Favorites> SeedFavorite(int userId, int articleId)
+    {
+        await using var context = _dbFixture.CreateContext();
+        var fav = new Entities.Favorites
+        {
+            UserId = userId,
+            ArticleId = articleId
+        };
+        context.Favorites.Add(fav);
+        await context.Articles
+            .Where(a => a.Id == articleId)
+            .ExecuteUpdateAsync(update => update.SetProperty(a => a.FavoritesCount, a => a.FavoritesCount + 1));
+        await context.SaveChangesAsync();
+        return fav;
+    }
+
+    private async Task<Entities.Follows> SeedFollows(int followerId, int followingId)
+    {
+        await using var context = _dbFixture.CreateContext();
+        var follows = new Entities.Follows
+        {
+            FollowerId = followerId,
+            FolloweeId = followingId
+        };
+        context.Follows.Add(follows);
+        await context.SaveChangesAsync();
+        return follows;
     }
 }
