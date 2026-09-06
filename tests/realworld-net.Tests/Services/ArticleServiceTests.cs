@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Dtos;
-using realworld_net.Entities;
 using realworld_net.Services;
 
 namespace realworld_net.Tests.Services;
@@ -114,8 +113,16 @@ public class ArticleServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = new ArticleService(context);
 
-        var foundArticle = service.GetArticleBySlugAsync(article.Slug, null);
-        Assert.Equivalent(article, foundArticle);
+        var foundArticle = await service.GetArticleBySlugAsync(article.Slug, null);
+        Assert.NotNull(foundArticle);
+        Assert.Equal(article.Slug, foundArticle.Slug);
+        Assert.Equal(article.Title, foundArticle.Title);
+        Assert.Equal(article.Description, foundArticle.Description);
+        Assert.Equal(article.Body, foundArticle.Body);
+        Assert.Equal(user.Username, foundArticle.Author.Username);
+        Assert.False(foundArticle.Author.Following);   // no auth → not following
+        Assert.False(foundArticle.Favorited);          // no auth → not favorited
+        Assert.Equal(0, foundArticle.FavoritesCount);
     }
 
     [Fact]
@@ -140,6 +147,56 @@ public class ArticleServiceTests : IAsyncLifetime
         Assert.Equal(1, foundArticle.FavoritesCount);
     }
 
+    [Fact]
+    public async Task ListArticles_NoAuth_NoFilter()
+    {
+        var author1 = await SeedUserAsync("Joe");
+        var article1 = await SeedArticleAsync(author1.Id);
+
+        var author2 = await SeedUserAsync("Mo");
+        var article2 = await SeedArticleAsync(author2.Id, "new-article");
+
+        // Backdate article2.
+        await using var context = _dbFixture.CreateContext();
+        await context.Articles
+            .Where(a => a.Id == article2.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.CreatedAt, DateTime.UtcNow.AddDays(-1)));
+
+        var service = new ArticleService(context);
+        var filter = new ArticleFilter();
+        var articles = await service.ListArticles(filter, null);
+
+        Assert.Equal(2, articles.ArticlesCount);
+        Assert.Equal(article1.Slug, articles.Articles[0].Slug);
+        Assert.Equivalent(article2.Slug, articles.Articles[1].Slug);
+    }
+
+    [Fact]
+    public async Task ListArticles_AuthorFilter_NoAuth()
+    {
+        var author1 = await SeedUserAsync("Joe");
+        var article1 = await SeedArticleAsync(author1.Id);
+
+        var author2 = await SeedUserAsync("Mo");
+        var article2 = await SeedArticleAsync(author2.Id, "new-article");
+
+        // Backdate article2.
+        await using var context = _dbFixture.CreateContext();
+        await context.Articles
+            .Where(a => a.Id == article2.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.CreatedAt, DateTime.UtcNow.AddDays(-1)));
+
+        var service = new ArticleService(context);
+        var filter = new ArticleFilter
+        {
+            Author = "Joe"
+        };
+        var articles = await service.ListArticles(filter, null);
+
+        Assert.Equal(1, articles.ArticlesCount);
+        Assert.Equal(article1.Slug, articles.Articles[0].Slug);
+    }
+
     public Task DisposeAsync() => Task.CompletedTask;
     public async Task InitializeAsync() => await _dbFixture.ResetAsync();
 
@@ -157,13 +214,13 @@ public class ArticleServiceTests : IAsyncLifetime
         return user;
     }
 
-    private async Task<Entities.Article> SeedArticleAsync(int userId)
+    private async Task<Entities.Article> SeedArticleAsync(int userId, string slug = "test")
     {
         await using var context = _dbFixture.CreateContext();
         var article = new Entities.Article
         {
-            Slug = "test",
-            Title = "test",
+            Slug = slug,
+            Title = slug,
             Description = "test",
             Body = "test",
             AuthorId = userId,
