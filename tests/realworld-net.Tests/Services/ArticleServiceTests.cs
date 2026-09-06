@@ -29,6 +29,38 @@ public class ArticleServiceTests : IAsyncLifetime
         Assert.Equal(user.Id, readArticle.AuthorId);
     }
 
+    [Fact]
+    public async Task DeleteArticleAsync_ShouldDeleteArticleForAuthor()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+        await service.DeleteArticleAsync(user.Id, article.Slug);
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var articleExists = await assertContext.Articles.AnyAsync(a => a.Slug == article.Slug);
+        Assert.False(articleExists);
+    }
+
+    [Fact]
+    public async Task DeleteArticleAsync_ShouldFailsForNotAuthor()
+    {
+        var user = await SeedUserAsync("Jo");
+        var author = await SeedUserAsync("Mo");
+        var article = await SeedArticleAsync(author.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await service.DeleteArticleAsync(user.Id, article.Slug));
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var articleExists = await assertContext.Articles.AnyAsync(a => a.Slug == article.Slug);
+        Assert.True(articleExists);
+    }
+
     public Task DisposeAsync() => Task.CompletedTask;
     public async Task InitializeAsync() => await _dbFixture.ResetAsync();
 
@@ -39,10 +71,26 @@ public class ArticleServiceTests : IAsyncLifetime
         {
             Username = username,
             Email = $"{username}@test.com",
-            PasswordHash = "password"
+            PasswordHash = "password",
         };
         context.Users.Add(user);
         await context.SaveChangesAsync();
         return user;
+    }
+
+    private async Task<Entities.Article> SeedArticleAsync(int userId)
+    {
+        await using var context = _dbFixture.CreateContext();
+        var article = new Entities.Article
+        {
+            Slug = "test",
+            Title = "test",
+            Description = "test",
+            Body = "test",
+            AuthorId = userId,
+        };
+        context.Articles.Add(article);
+        await context.SaveChangesAsync();
+        return article;
     }
 }
