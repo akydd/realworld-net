@@ -58,6 +58,7 @@ public class ArticleService : IArticleService
             .FirstAsync();
     }
 
+    /// <inheritdoc/>
     public async Task DeleteArticleAsync(int userId, string slug)
     {
         var articleToDelete = await _context.Articles

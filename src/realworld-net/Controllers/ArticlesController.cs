@@ -111,8 +111,17 @@ public class ArticlesController : ControllerBase
 
     }
 
+    /// <summary>
+    /// Delete an article.
+    /// </summary>
+    /// <param name="slug">The unique slug of the article.</param>
+    /// <returns>Nothing.</returns>
+    /// <response code="200">The article was deleted.</response>
+    /// <response code="403">The caller does not have permission to delete the article.</response>
     [Authorize]
     [HttpDelete("{slug}", Name = "Delete Article")]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteArticle(string slug)
     {
         var userId = int.Parse(User.FindFirstValue("id")!, CultureInfo.InvariantCulture);

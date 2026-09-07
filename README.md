@@ -10,6 +10,7 @@ A backend implementation of the [RealWorld](https://realworld-docs.netlify.app/)
 - **Entity Framework Core 10** with **SQL Server** (running in Docker)
 - **JWT bearer authentication** (`Microsoft.AspNetCore.Authentication.JwtBearer`), issued with HS256
 - **OpenAPI** via the built-in `Microsoft.AspNetCore.OpenApi`, with a **[Scalar](https://scalar.com/)** API reference UI
+- **Integration tests** with **xUnit** + **[Testcontainers](https://testcontainers.com/)** (real SQL Server) + **[Respawn](https://github.com/jbogard/Respawn)**
 - Nullable reference types, analyzers, and `TreatWarningsAsErrors` enabled; formatting enforced via `.editorconfig` + `dotnet format`
 
 ## Getting started
@@ -41,6 +42,27 @@ Local settings (connection string, JWT signing key) live in `src/realworld-net/a
 ```bash
 dotnet user-secrets set "JwtSettings:Secret" "<a-long-random-key>" --project src/realworld-net
 ```
+
+## Running the tests
+
+The suite is **integration tests**: each service is exercised against a real SQL Server instance that [Testcontainers](https://testcontainers.com/) spins up in Docker automatically. **Docker must be running**, but no manual database setup is needed — the tests create, migrate, and tear down their own throwaway container. You do *not* need the `docker compose` SQL Server from above; the tests manage their own.
+
+```bash
+dotnet test        # from the repo root — runs the full suite (35 tests)
+```
+
+Run a single class or a single test with `--filter`:
+
+```bash
+dotnet test --filter "ProfileServiceTests"
+dotnet test --filter "FavoriteArticleAsync_Idempotent"
+```
+
+Notes:
+- All DB tests share **one** SQL Server container for the run and reset state between tests with [Respawn](https://github.com/jbogard/Respawn), so they execute sequentially and in isolation.
+- The **first run is slow** — Docker pulls the SQL Server image and boots the container (noticeably slower on Apple Silicon, where the image runs under emulation). Later runs reuse the cached image.
+
+Current coverage: `ArticleServiceTests` (13), `ProfileServiceTests` (10), `UserServiceTests` (12) — covering happy paths, not-found/authorization failures, idempotency (favorite/follow), and concurrency via the DB constraints.
 
 ## API
 
@@ -107,4 +129,5 @@ The token returned to clients is **not** a DB column — it's derived per reques
 
 - Personal feed (`GET /api/articles/feed`) over followed authors
 - Comments and tags
-- Automated tests (unit + integration via `WebApplicationFactory`) and a CI workflow
+- CI workflow (build + `dotnet format` check + `dotnet test`)
+- End-to-end HTTP tests via `WebApplicationFactory` (the current suite covers the service layer)
