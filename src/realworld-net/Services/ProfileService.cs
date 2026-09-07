@@ -36,21 +36,25 @@ public class ProfileService : IProfileService
     public async Task<Profile> FollowUserAsync(string username, int currentUserId)
     {
         var userToFollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new Exception("User not found");
+        var alreadyFollowed = await _context.Follows.AnyAsync(f => f.FollowerId == currentUserId && f.FolloweeId == userToFollow.Id);
 
-        _context.Follows.Add(new Entities.Follows
+        if (!alreadyFollowed)
         {
-            FollowerId = currentUserId,
-            FolloweeId = userToFollow.Id
-        });
-        try
-        {
-            await _context.SaveChangesAsync();
+            _context.Follows.Add(new Entities.Follows
+            {
+                FollowerId = currentUserId,
+                FolloweeId = userToFollow.Id
+            });
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (UniqueConstraintException)
+            {
+                // A concurrent request inserted the same follow between our check and
+                // save — the unique constraint makes this an idempotent no-op.
+            }
         }
-        catch (UniqueConstraintException)
-        {
-            // Do nothing, user is already following.
-        }
-
         return new Profile
         (
             userToFollow.Username,

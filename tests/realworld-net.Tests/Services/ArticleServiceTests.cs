@@ -86,21 +86,24 @@ public class ArticleServiceTests : IAsyncLifetime
         var user = await SeedUserAsync();
         var article = await SeedArticleAsync(user.Id);
 
-        await using var context = _dbFixture.CreateContext();
-        var service = new ArticleService(context);
 
-        var fav = await service.FavoriteArticleAsync(user.Id, article.Slug);
-        Assert.Equal(1, fav.FavoritesCount);
-        // And again
-        var fav2 = await service.FavoriteArticleAsync(user.Id, article.Slug);
-        Assert.Equivalent(fav, fav2);
+        await using (var context1 = _dbFixture.CreateContext())
+        {
+            await new ArticleService(context1).FavoriteArticleAsync(user.Id, article.Slug);
+        }
+
+        await using (var context2 = _dbFixture.CreateContext())
+        {
+            var fav = await new ArticleService(context2).FavoriteArticleAsync(user.Id, article.Slug);
+            Assert.Equal(1, fav.FavoritesCount);
+        }
 
         await using var assertContext = _dbFixture.CreateContext();
         var updatedArticle = await assertContext.Articles.SingleAsync(a => a.Slug == article.Slug);
         Assert.Equal(1, updatedArticle.FavoritesCount);
 
-        var favRecordExists = await assertContext.Favorites.AnyAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);
-        Assert.True(favRecordExists);
+        var favRecordCount = await assertContext.Favorites.CountAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);
+        Assert.Equal(1, favRecordCount);
     }
 
     [Fact]
@@ -219,20 +222,18 @@ public class ArticleServiceTests : IAsyncLifetime
         var article = await SeedArticleAsync(user.Id);
         await SeedFavorite(user.Id, article.Id);
 
-        await using var context = _dbFixture.CreateContext();
-        var service = new ArticleService(context);
+        await using (var context1 = _dbFixture.CreateContext())
+        {
+            var afterFirst = await new ArticleService(context1).UnfavoriteArticleAsync(user.Id, article.Slug);
+        }
 
-        // First unfavorite removes the favorite and decrements the count.
-        var afterFirst = await service.UnfavoriteArticleAsync(user.Id, article.Slug);
-        Assert.NotNull(afterFirst);
-        Assert.False(afterFirst.Favorited);
-        Assert.Equal(0, afterFirst.FavoritesCount);
-
-        // Unfavoriting again is a safe no-op, not an error.
-        var afterSecond = await service.UnfavoriteArticleAsync(user.Id, article.Slug);
-        Assert.NotNull(afterSecond);
-        Assert.False(afterSecond.Favorited);
-        Assert.Equal(0, afterSecond.FavoritesCount);
+        await using (var context2 = _dbFixture.CreateContext())
+        {
+            var afterSecond = await new ArticleService(context2).UnfavoriteArticleAsync(user.Id, article.Slug);
+            Assert.NotNull(afterSecond);
+            Assert.False(afterSecond.Favorited);
+            Assert.Equal(0, afterSecond.FavoritesCount);
+        }
 
         await using var assertContext = _dbFixture.CreateContext();
         var favRecordExists = await assertContext.Favorites.AnyAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);

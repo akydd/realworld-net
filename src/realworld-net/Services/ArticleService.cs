@@ -1,3 +1,4 @@
+using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
 using realworld_net.Dtos;
@@ -90,8 +91,15 @@ public class ArticleService : IArticleService
                 .ExecuteUpdateAsync(update => update
                     .SetProperty(a => a.FavoritesCount, a => a.FavoritesCount + 1));
 
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (UniqueConstraintException)
+            {
+                // Do nothing
+            }
         }
 
         return await GetArticleBySlugAsync(slug, userId) ?? throw new Exception("Article not found after favoriting.");
