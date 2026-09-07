@@ -45,7 +45,7 @@ public class ArticleServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DeleteArticleAsync_ShouldFailsForNotAuthor()
+    public async Task DeleteArticleAsync_ShouldFailsForNonAuthor()
     {
         var user = await SeedUserAsync("Jo");
         var author = await SeedUserAsync("Mo");
@@ -85,7 +85,6 @@ public class ArticleServiceTests : IAsyncLifetime
     {
         var user = await SeedUserAsync();
         var article = await SeedArticleAsync(user.Id);
-        // await SeedFavorite(user.Id, article.Id);
 
         await using var context = _dbFixture.CreateContext();
         var service = new ArticleService(context);
@@ -168,7 +167,7 @@ public class ArticleServiceTests : IAsyncLifetime
 
         Assert.Equal(2, articles.ArticlesCount);
         Assert.Equal(article1.Slug, articles.Articles[0].Slug);
-        Assert.Equivalent(article2.Slug, articles.Articles[1].Slug);
+        Assert.Equal(article2.Slug, articles.Articles[1].Slug);
     }
 
     [Fact]
@@ -195,6 +194,98 @@ public class ArticleServiceTests : IAsyncLifetime
 
         Assert.Equal(1, articles.ArticlesCount);
         Assert.Equal(article1.Slug, articles.Articles[0].Slug);
+    }
+
+    [Fact]
+    public async Task UnfavoriteArticle_WorksWhenArticleExists()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+        await SeedFavorite(user.Id, article.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        var updatedArticle = await service.UnfavoriteArticleAsync(user.Id, article.Slug);
+        Assert.NotNull(updatedArticle);
+        Assert.False(updatedArticle.Favorited);
+        Assert.Equal(0, updatedArticle.FavoritesCount);
+    }
+
+    [Fact]
+    public async Task UnfavoriteArticle_Idempotent()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+        await SeedFavorite(user.Id, article.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        // First unfavorite removes the favorite and decrements the count.
+        var afterFirst = await service.UnfavoriteArticleAsync(user.Id, article.Slug);
+        Assert.NotNull(afterFirst);
+        Assert.False(afterFirst.Favorited);
+        Assert.Equal(0, afterFirst.FavoritesCount);
+
+        // Unfavoriting again is a safe no-op, not an error.
+        var afterSecond = await service.UnfavoriteArticleAsync(user.Id, article.Slug);
+        Assert.NotNull(afterSecond);
+        Assert.False(afterSecond.Favorited);
+        Assert.Equal(0, afterSecond.FavoritesCount);
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var favRecordExists = await assertContext.Favorites.AnyAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);
+        Assert.False(favRecordExists);
+    }
+
+    [Fact]
+    public async Task UpdateArticle_FailsForNonAuthor()
+    {
+        var user = await SeedUserAsync("Jo");
+        var author = await SeedUserAsync("Mo");
+        var article = await SeedArticleAsync(author.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+            await service.UpdateArticleAsync(user.Id, article.Slug,
+                new UpdateArticleDto(new UpdateArticleInnerDto("updated", "updated", "updated"))));
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var fetchedArticle = await assertContext.Articles.SingleAsync(a => a.Slug == article.Slug);
+        Assert.Equal(article.UpdatedAt, fetchedArticle.UpdatedAt);
+        Assert.Equal(article.Slug, fetchedArticle.Slug);
+        Assert.Equal(article.Title, fetchedArticle.Title);
+        Assert.Equal(article.Description, fetchedArticle.Description);
+        Assert.Equal(article.Body, fetchedArticle.Body);
+    }
+
+    [Fact]
+    public async Task UpdateArticle_SucceedsForAuthor()
+    {
+        var author = await SeedUserAsync("Mo");
+        var article = await SeedArticleAsync(author.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        var updatedArticle = await service.UpdateArticleAsync(author.Id, article.Slug,
+                new UpdateArticleDto(new UpdateArticleInnerDto("Updated Title", "updated description", "updated body")));
+        Assert.NotNull(updatedArticle);
+        Assert.Equal("updated-title", updatedArticle.Slug);
+        Assert.Equal("Updated Title", updatedArticle.Title);
+        Assert.Equal("updated description", updatedArticle.Description);
+        Assert.Equal("updated body", updatedArticle.Body);
+
+        await using var assertContext = _dbFixture.CreateContext();
+        var fetchedArticle = await assertContext.Articles.SingleAsync(a => a.Id == article.Id);
+        Assert.Equal(updatedArticle.UpdatedAt, fetchedArticle.UpdatedAt);
+        Assert.Equal(updatedArticle.Slug, fetchedArticle.Slug);
+        Assert.Equal(updatedArticle.Title, fetchedArticle.Title);
+        Assert.Equal(updatedArticle.Description, fetchedArticle.Description);
+        Assert.Equal(updatedArticle.Body, fetchedArticle.Body);
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
