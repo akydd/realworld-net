@@ -50,11 +50,6 @@ public class UserService : IUserService
             );
     }
 
-    public Task<User?> GetUserByEmailAsync(string email)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<User> RegisterUserAsync(RegisterUserDto userDto)
     {
         var hashedPassword = _passwordHasher.HashPassword(userDto.User.Password);
