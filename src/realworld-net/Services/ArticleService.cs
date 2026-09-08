@@ -2,6 +2,7 @@ using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
 using realworld_net.Dtos;
+using realworld_net.Exceptions;
 using realworld_net.Models;
 using DbArticle = realworld_net.Entities.Article;
 
@@ -62,8 +63,12 @@ public class ArticleService : IArticleService
     public async Task DeleteArticleAsync(int userId, string slug)
     {
         var articleToDelete = await _context.Articles
-            .Where(a => a.Slug == slug && a.AuthorId == userId)
-            .FirstOrDefaultAsync() ?? throw new UnauthorizedAccessException("You are not authorized to delete this article.");
+            .FirstOrDefaultAsync(a => a.Slug == slug) ?? throw new NotFoundException("article");
+
+        if (articleToDelete.AuthorId != userId)
+        {
+            throw new ForbiddenException("article");
+        }
 
         _context.Remove(articleToDelete);
         await _context.SaveChangesAsync();
@@ -73,7 +78,7 @@ public class ArticleService : IArticleService
     {
         var article = await _context.Articles
             .Where(a => a.Slug == slug)
-            .FirstOrDefaultAsync() ?? throw new Exception("Article not found.");
+            .FirstOrDefaultAsync() ?? throw new NotFoundException("article");
 
         var alreadyFavorited = await _context.Favorites
             .AnyAsync(f => f.UserId == userId && f.ArticleId == article.Id);
@@ -99,14 +104,15 @@ public class ArticleService : IArticleService
             }
             catch (UniqueConstraintException)
             {
-                // Do nothing
+                // Do nothing, the article is already a favorite.
+                // This op is idempotent.
             }
         }
 
-        return await GetArticleBySlugAsync(slug, userId) ?? throw new Exception("Article not found after favoriting.");
+        return await GetArticleBySlugAsync(slug, userId);
     }
 
-    public async Task<Article?> GetArticleBySlugAsync(string slug, int? userId)
+    public async Task<Article> GetArticleBySlugAsync(string slug, int? userId)
     {
         return await _context.Articles
             .Where(a => a.Slug == slug)
@@ -129,7 +135,7 @@ public class ArticleService : IArticleService
                     userId != null && _context.Follows.Any(f => f.FollowerId == userId && f.FolloweeId == a.AuthorId)
                 )
             ))
-             .FirstOrDefaultAsync();
+             .FirstOrDefaultAsync() ?? throw new NotFoundException("article");
     }
 
     public async Task<ArticleFeed> ListArticles(ArticleFilter filter, int? userId)
@@ -177,7 +183,7 @@ public class ArticleService : IArticleService
     {
         var article = _context.Articles
             .Where(a => a.Slug == slug)
-            .FirstOrDefault() ?? throw new Exception("Article not found.");
+            .FirstOrDefault() ?? throw new NotFoundException("article");
 
         var isFavorited = await _context.Favorites
             .AnyAsync(f => f.UserId == userId && f.ArticleId == article.Id);
@@ -194,17 +200,21 @@ public class ArticleService : IArticleService
             await transaction.CommitAsync();
         }
 
-        return await GetArticleBySlugAsync(slug, userId) ?? throw new Exception("Article not found after unfavoriting.");
+        return await GetArticleBySlugAsync(slug, userId);
     }
 
     public async Task<Article> UpdateArticleAsync(int userId, string slug, UpdateArticleDto articleDto)
     {
+        // Have to handle two cases:
+        // 1. The article isn't found
+        var articleToUpdate = await _context.Articles.SingleOrDefaultAsync(a => a.Slug == slug) ?? throw new NotFoundException("article");
+        // 2. The article belongs to somebody else.
+        if (articleToUpdate.AuthorId != userId)
+        {
+            throw new ForbiddenException("article");
+        }
+
         var innerDto = articleDto.Article;
-
-        var articleToUpdate = await _context.Articles
-            .Where(a => a.Slug == slug && a.AuthorId == userId)
-            .FirstOrDefaultAsync() ?? throw new UnauthorizedAccessException("You are not authorized to update this article.");
-
         if (innerDto.Title != null)
         {
             articleToUpdate.Title = innerDto.Title;
@@ -223,7 +233,7 @@ public class ArticleService : IArticleService
 
         await _context.SaveChangesAsync();
 
-        return await GetArticleBySlugAsync(articleToUpdate.Slug, userId) ?? throw new Exception("Article not found after update.");
+        return await GetArticleBySlugAsync(articleToUpdate.Slug, userId);
     }
 
     private string GenerateSlug(string title)

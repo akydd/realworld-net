@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Dtos;
+using realworld_net.Exceptions;
 using realworld_net.Services;
 
 namespace realworld_net.Tests.Services;
@@ -54,11 +55,23 @@ public class ArticleServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = new ArticleService(context);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await service.DeleteArticleAsync(user.Id, article.Slug));
+        await Assert.ThrowsAsync<ForbiddenException>(async () => await service.DeleteArticleAsync(user.Id, article.Slug));
 
         await using var assertContext = _dbFixture.CreateContext();
         var articleExists = await assertContext.Articles.AnyAsync(a => a.Slug == article.Slug);
         Assert.True(articleExists);
+    }
+
+    [Fact]
+    public async Task DeleteArticleAsync_ShouldThrowWhenArticleNotFound()
+    {
+        var author = await SeedUserAsync("Mo");
+        var article = await SeedArticleAsync(author.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await service.DeleteArticleAsync(author.Id, $"{article.Slug}-1"));
     }
 
     [Fact]
@@ -78,6 +91,18 @@ public class ArticleServiceTests : IAsyncLifetime
 
         var favRecordExists = await assertContext.Favorites.AnyAsync(f => f.ArticleId == article.Id && f.UserId == user.Id);
         Assert.True(favRecordExists);
+    }
+
+    [Fact]
+    public async Task FavoriteArticleAsync_ThrowsWhenArticleDoesNotExist()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await service.FavoriteArticleAsync(user.Id, $"{article.Slug}-1"));
     }
 
     [Fact]
@@ -150,6 +175,19 @@ public class ArticleServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetArticleBySlugAsync_ThrowsWhenArticleDoesNotExist_NoAuth()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await service.GetArticleBySlugAsync($"{article.Slug}-1", null));
+    }
+
+    [Fact]
     public async Task ListArticles_NoAuth_NoFilter()
     {
         var author1 = await SeedUserAsync("Joe");
@@ -216,6 +254,19 @@ public class ArticleServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UnfavoriteArticle_ThrowsWhenArticleDoesNotExist()
+    {
+        var user = await SeedUserAsync();
+        var article = await SeedArticleAsync(user.Id);
+        await SeedFavorite(user.Id, article.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await service.UnfavoriteArticleAsync(user.Id, $"{article.Slug}-1"));
+    }
+
+    [Fact]
     public async Task UnfavoriteArticle_Idempotent()
     {
         var user = await SeedUserAsync();
@@ -250,7 +301,7 @@ public class ArticleServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = new ArticleService(context);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<ForbiddenException>(async () =>
             await service.UpdateArticleAsync(user.Id, article.Slug,
                 new UpdateArticleDto(new UpdateArticleInnerDto("updated", "updated", "updated"))));
 
@@ -261,6 +312,20 @@ public class ArticleServiceTests : IAsyncLifetime
         Assert.Equal(article.Title, fetchedArticle.Title);
         Assert.Equal(article.Description, fetchedArticle.Description);
         Assert.Equal(article.Body, fetchedArticle.Body);
+    }
+
+    [Fact]
+    public async Task UpdateArticle_FailsWhenArticleNotFound()
+    {
+        var author = await SeedUserAsync("Mo");
+        var article = await SeedArticleAsync(author.Id);
+
+        await using var context = _dbFixture.CreateContext();
+        var service = new ArticleService(context);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
+            await service.UpdateArticleAsync(author.Id, $"{article.Slug}-1",
+                new UpdateArticleDto(new UpdateArticleInnerDto("updated", "updated", "updated"))));
     }
 
     [Fact]
