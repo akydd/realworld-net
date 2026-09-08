@@ -1,0 +1,39 @@
+name: .NET integration tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Get the code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 2. Init the app
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    # 3. Ger deps
+    - name: Get dependencies
+      run: dotnet restore
+
+    # 4. Check formatting
+    - name: CHeck formatting
+      run: dotnet formatting --verify-no-changes
+
+    # 5. COmpile
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    # 6. Run the tests
+    - name: Run tests
+      run: dotnet test --configuration Release --no-restore --no-build --verbosity normal
+
