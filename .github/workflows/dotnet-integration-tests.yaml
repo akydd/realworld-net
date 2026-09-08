@@ -27,7 +27,7 @@ jobs:
 
     # 4. Check formatting
     - name: CHeck formatting
-      run: dotnet formatting --verify-no-changes
+      run: dotnet format --verify-no-changes
 
     # 5. COmpile
     - name: Build
