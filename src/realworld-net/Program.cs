@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using realworld_net.Data;
+using realworld_net.Dtos;
 using realworld_net.Middleware;
 using realworld_net.OpenApi;
 using realworld_net.Services;
@@ -30,6 +31,7 @@ builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddControllers();
 
 // Custom exception handling middleware
+builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddExceptionHandler<DuplicateExceptionHandler>();
 builder.Services.AddExceptionHandler<UnauthorizedAccessExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -86,6 +88,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     context.Token = authorizationHeader.Substring("Token ".Length).Trim();
                 }
                 return Task.CompletedTask;
+            },
+
+            // Spec requires a response body for 401.
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                var errorResponse = new ErrorDto(new Dictionary<string, List<string>>
+                {
+                    ["token"] = new List<string> { "is missing" }
+                });
+                await context.Response.WriteAsJsonAsync(errorResponse);
             }
         };
     });

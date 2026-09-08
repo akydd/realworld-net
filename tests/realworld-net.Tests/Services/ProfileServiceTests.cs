@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using realworld_net.Exceptions;
 using realworld_net.Services;
 
 namespace realworld_net.Tests.Services;
@@ -67,7 +68,7 @@ public class ProfileServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = new ProfileService(context);
 
-        await Assert.ThrowsAsync<Exception>(async () =>
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
             await service.GetProfileByUsernameAsync("ghost", null));
     }
 
@@ -127,7 +128,7 @@ public class ProfileServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = new ProfileService(context);
 
-        await Assert.ThrowsAsync<Exception>(async () =>
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
             await service.FollowUserAsync("ghost", follower.Id));
     }
 
@@ -181,7 +182,7 @@ public class ProfileServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = new ProfileService(context);
 
-        await Assert.ThrowsAsync<Exception>(async () =>
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
             await service.UnfollowUserAsync("ghost", follower.Id));
     }
 

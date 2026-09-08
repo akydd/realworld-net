@@ -16,3 +16,5 @@ public record ArticleSingleResponseDto(ArticleSingleInnerDto Article);
 public record ArticleMultipleInnerDto(string Slug, string Title, string Description, List<string> TagList, DateTime CreatedAt, DateTime UpdatedAt, bool Favorited, int FavoritesCount, ProfileResponseInnerDto Author);
 
 public record ArticleMultipleDto(List<ArticleMultipleInnerDto> Articles, int ArticlesCount);
+
+public record ErrorDto(Dictionary<string, List<string>> errors);

@@ -1,6 +1,7 @@
 using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
+using realworld_net.Exceptions;
 using realworld_net.Models;
 
 namespace realworld_net.Services;
@@ -16,7 +17,7 @@ public class ProfileService : IProfileService
 
     public async Task<Profile> GetProfileByUsernameAsync(string username, int? currentUserId)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new Exception("User not found");
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new NotFoundException("profile");
         bool isFollowing = false;
 
         if (currentUserId.HasValue)
@@ -35,7 +36,7 @@ public class ProfileService : IProfileService
 
     public async Task<Profile> FollowUserAsync(string username, int currentUserId)
     {
-        var userToFollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new Exception("User not found");
+        var userToFollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new NotFoundException("profile");
         var alreadyFollowed = await _context.Follows.AnyAsync(f => f.FollowerId == currentUserId && f.FolloweeId == userToFollow.Id);
 
         if (!alreadyFollowed)
@@ -66,7 +67,7 @@ public class ProfileService : IProfileService
 
     public async Task<Profile> UnfollowUserAsync(string username, int currentUserId)
     {
-        var userToUnfollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new Exception("User not found");
+        var userToUnfollow = await _context.Users.FirstOrDefaultAsync(u => u.Username == username) ?? throw new NotFoundException("profile");
 
         await _context.Follows.Where(f => f.FollowerId == currentUserId && f.FolloweeId == userToUnfollow.Id)
             .ExecuteDeleteAsync();
