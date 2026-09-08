@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in, OR pass via TF_VAR_* env vars.
+# Never commit real secrets.
+
+sql_admin_password = "<a-strong-password>"          # >= 8 chars, upper/lower/digit/symbol
+jwt_secret         = "<a-long-random-key-32-plus>"  # HS256 signing key
+
+# New/free subscriptions can't provision SQL in some regions ("ProvisioningDisabled").
+# If you hit that, pick another region here — try eastus2, westus3, centralus, westus2, northeurope.
+# location = "eastus2"
+
+# client_ip = "203.0.113.10"   # your public IP, to run migrations from your machine

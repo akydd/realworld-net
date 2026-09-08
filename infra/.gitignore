@@ -1,0 +1,14 @@
+# Terraform state — CONTAINS SECRETS (SQL password, JWT key). Never commit.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.tfstate.lock.info
+
+# Variable files with real secret values.
+*.tfvars
+!*.tfvars.example
+
+crash.log
+crash.*.log
+
+# NOTE: .terraform.lock.hcl is intentionally NOT ignored — commit it to pin provider versions.

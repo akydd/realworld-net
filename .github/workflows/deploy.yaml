@@ -1,0 +1,37 @@
+name: Deploy to Azure
+
+# Runs only after the integration-test workflow succeeds on main, so a red
+# build never gets deployed. Set the repo variable AZURE_WEBAPP_NAME (from
+# `terraform output web_app_name`) and the secret AZURE_WEBAPP_PUBLISH_PROFILE
+# (downloaded from the App Service) before the first run.
+on:
+  workflow_run:
+    workflows: [".NET integration tests"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # workflow_dispatch has no workflow_run payload, so allow it through too.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: dotnet publish src/realworld-net/realworld-net.csproj --configuration Release --output ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish

@@ -106,13 +106,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Apply any pending EF Core migrations on startup so a fresh database
+// (e.g. the Azure SQL instance) is provisioned automatically on first deploy.
+using (var scope = app.Services.CreateScope())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
 }
+
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.UseExceptionHandler();
 
