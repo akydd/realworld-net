@@ -13,6 +13,6 @@ public abstract class AppException : Exception
 }
 
 public class NotFoundException(string field) : AppException(field, "not found");
-public class UnauthorizedException() : AppException("token", "is missing");
+public class UnauthorizedException(string field = "token", string error = "is missing") : AppException(field, error);
 public class ForbiddenException(string field) : AppException(field, "forbidden");
 public class ConflictException(string field) : AppException(field, "has already been taken");

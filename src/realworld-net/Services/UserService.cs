@@ -64,7 +64,7 @@ public class UserService : IUserService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userDto.User.Email);
         if (user == null || !_passwordHasher.VerifyPassword(user.PasswordHash, userDto.User.Password))
         {
-            throw new UnauthorizedAccessException("Invalid email or password.");
+            throw new UnauthorizedException("credentials", "invalid");
         }
 
         var token = _jwtService.GenerateToken(user.Id);

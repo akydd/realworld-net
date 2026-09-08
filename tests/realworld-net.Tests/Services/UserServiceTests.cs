@@ -111,7 +111,7 @@ public class UserServiceTests : IAsyncLifetime
 
         var service = CreateUserService(context);
         var loginDto = new LoginUserDto(new LoginUserInnerDto(user.Email, "not the password"));
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await service.LoginUserAsync(loginDto));
+        await Assert.ThrowsAsync<UnauthorizedException>(async () => await service.LoginUserAsync(loginDto));
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class UserServiceTests : IAsyncLifetime
         var service = CreateUserService(context);
 
         var loginDto = new LoginUserDto(new LoginUserInnerDto("nobody@test.com", "password"));
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<UnauthorizedException>(async () =>
             await service.LoginUserAsync(loginDto));
     }
 
