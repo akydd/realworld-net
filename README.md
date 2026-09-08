@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/akydd/realworld-net/actions/workflows/dotnet-integration-tests.yaml/badge.svg)](https://github.com/akydd/realworld-net/actions/workflows/dotnet-integration-tests.yaml)
 
+**🔗 [Live demo — interactive API docs](https://app-realworld-net-xia228.azurewebsites.net/scalar)** (Azure free tier; the first request after idle may take ~30–60s to wake)
+
 A backend implementation of the [RealWorld](https://realworld-docs.netlify.app/) ("Conduit") API spec, built with **ASP.NET Core on .NET 10**. RealWorld is a Medium.com-style blogging platform — users, profiles with following, articles with slugs and favorites — used as a reference spec for exercising a framework end to end.
 
 > **Status: in progress.** The users, profiles, and articles feature sets are implemented (including auth, following, and favorites). Comments, tags, and the personal feed are not yet built — see [Implementation status](#implementation-status).
@@ -67,6 +69,55 @@ Notes:
 Current coverage: `ArticleServiceTests` (18), `ProfileServiceTests` (10), `UserServiceTests` (10) — covering happy paths, not-found/authorization failures, idempotency (favorite/follow), and concurrency via the DB constraints.
 
 CI runs this same suite (real SQL Server via Testcontainers) on every push and pull request — see the badge at the top and the [workflow](.github/workflows/dotnet-integration-tests.yaml).
+
+## Deployment
+
+Infrastructure is provisioned with **Terraform** (`infra/`), and the app **auto-deploys to Azure App Service** on merge to `main`. The whole stack runs on Azure free tiers.
+
+### Infrastructure (Terraform)
+
+The `infra/` config provisions a resource group, an Azure SQL server + a **serverless free-tier database**, and a **Free (F1) App Service** running the API — with the connection string and JWT secret injected as app settings. The database uses the [`azapi`](https://registry.terraform.io/providers/azure/azapi/latest) provider to enable the SQL free offer (`useFreeLimit`), which the `azurerm` provider doesn't expose.
+
+**Prerequisites:** an Azure subscription, the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), and [Terraform](https://developer.hashicorp.com/terraform/install).
+
+```bash
+az login
+
+# One-time on a new subscription: register the resource providers this config uses.
+az provider register --namespace Microsoft.Sql
+az provider register --namespace Microsoft.Web
+
+cd infra
+cp terraform.tfvars.example terraform.tfvars   # set sql_admin_password + jwt_secret
+terraform init
+terraform plan
+terraform apply
+```
+
+Useful outputs: `web_app_url` (the live site) and `connection_string` (`terraform output -raw connection_string`).
+
+**Region note:** new/free subscriptions can't provision SQL in some regions (`ProvisioningDisabled`). Set `location` in `terraform.tfvars` to one that works for you (e.g. `canadacentral`).
+
+**Teardown** — removes every resource and stops any possibility of billing:
+
+```bash
+terraform destroy
+```
+
+**Secrets never touch source control.** The SQL password and JWT key are `sensitive` Terraform variables supplied via `terraform.tfvars` or `TF_VAR_*` environment variables, both gitignored — as is the state file (which contains them).
+
+### Continuous deployment
+
+On every **push/merge to `main`**, the [test workflow](.github/workflows/dotnet-integration-tests.yaml) runs; when it succeeds, the [deploy workflow](.github/workflows/deploy.yaml) publishes the app to App Service. The deploy job is **gated on the test run passing** (`workflow_run` + a `conclusion == 'success'` check), so a red build never ships. Manual deploys are available from the Actions tab (`workflow_dispatch`).
+
+EF Core migrations run automatically on app startup, so each deploy provisions/updates the schema with no manual step.
+
+The pipeline needs two repository settings (one-time), both obtained from the Terraform run:
+
+| Kind | Name | Value |
+|---|---|---|
+| Variable | `AZURE_WEBAPP_NAME` | `terraform output web_app_name` |
+| Secret | `AZURE_WEBAPP_PUBLISH_PROFILE` | `az webapp deployment list-publishing-profiles --name <app-name> --resource-group rg-realworld-net --xml` |
 
 ## API
 
