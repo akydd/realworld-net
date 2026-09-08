@@ -2,6 +2,7 @@ using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
 using realworld_net.Dtos;
+using realworld_net.Exceptions;
 using realworld_net.Services;
 
 namespace realworld_net.Tests.Services;
@@ -32,22 +33,6 @@ public class UserServiceTests : IAsyncLifetime
 
         var service = CreateUserService(context);
         var fetchedUser = await service.GetUserByIdAsync(user.Id);
-        Assert.NotNull(fetchedUser);
-        Assert.Equal(user.Bio, fetchedUser.Bio);
-        Assert.Equal(user.Email, fetchedUser.Email);
-        Assert.Equal(user.Image, fetchedUser.Image);
-        Assert.Equal(user.Username, fetchedUser.Username);
-        Assert.Null(fetchedUser.Token);
-    }
-
-    [Fact]
-    public async Task GetUserByUsernameAsync_SucceedsForExistingUser()
-    {
-        await using var context = _dbFixture.CreateContext();
-        var user = await SeedUser();
-
-        var service = CreateUserService(context);
-        var fetchedUser = await service.GetUserByUsernameAsync(user.Username);
         Assert.NotNull(fetchedUser);
         Assert.Equal(user.Bio, fetchedUser.Bio);
         Assert.Equal(user.Email, fetchedUser.Email);
@@ -160,18 +145,8 @@ public class UserServiceTests : IAsyncLifetime
         await using var context = _dbFixture.CreateContext();
         var service = CreateUserService(context);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
             await service.GetUserByIdAsync(999));
-    }
-
-    [Fact]
-    public async Task GetUserByUsernameAsync_ThrowsWhenUserNotFound()
-    {
-        await using var context = _dbFixture.CreateContext();
-        var service = CreateUserService(context);
-
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
-            await service.GetUserByUsernameAsync("ghost"));
     }
 
     [Fact]
@@ -206,7 +181,7 @@ public class UserServiceTests : IAsyncLifetime
         var service = CreateUserService(context);
 
         var updateDto = new UpdateUserDto(new UpdateUserInnerDto(null, null, null, "new bio", null));
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        await Assert.ThrowsAsync<NotFoundException>(async () =>
             await service.UpdateUserAsync(999, updateDto));
     }
 

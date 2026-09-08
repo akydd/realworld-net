@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using realworld_net.Data;
 using realworld_net.Dtos;
+using realworld_net.Exceptions;
 using realworld_net.Models;
 using DbUser = realworld_net.Entities.User;
 
@@ -20,27 +21,11 @@ public class UserService : IUserService
         _jwtService = jwtService;
     }
 
-    public async Task<User?> GetUserByIdAsync(int userId)
+    public async Task<User> GetUserByIdAsync(int userId)
     {
-        var user = await _context.Users.FindAsync(userId);
-        return user == null
-            ? throw new UnauthorizedAccessException("User not found.")
-            : new User
-            (
-                user.Username,
-                user.Email,
-                null,
-                user.Bio,
-                user.Image
-            );
-    }
-
-    public async Task<User?> GetUserByUsernameAsync(string username)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-        return user == null
-            ? throw new UnauthorizedAccessException("User not found.")
-            : new User
+        // This is unlikely when called from the Controller, but we handle it anyway.
+        var user = await _context.Users.SingleOrDefaultAsync(u => u.Id == userId) ?? throw new NotFoundException("user");
+        return new User
             (
                 user.Username,
                 user.Email,
@@ -97,7 +82,7 @@ public class UserService : IUserService
     public async Task<User> UpdateUserAsync(int userId, UpdateUserDto userDto)
     {
         var innerDto = userDto.User;
-        var userToUpdate = await _context.Users.FindAsync(userId) ?? throw new UnauthorizedAccessException("User not found.");
+        var userToUpdate = await _context.Users.FindAsync(userId) ?? throw new NotFoundException("user");
 
         if (innerDto.Bio != null)
         {

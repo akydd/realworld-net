@@ -5,8 +5,7 @@ namespace realworld_net.Services;
 
 public interface IUserService
 {
-    Task<User?> GetUserByIdAsync(int id);
-    Task<User?> GetUserByUsernameAsync(string username);
+    Task<User> GetUserByIdAsync(int id);
     Task<User> RegisterUserAsync(RegisterUserDto userDto);
     Task<User> LoginUserAsync(LoginUserDto userDto);
     Task<User> UpdateUserAsync(int userId, UpdateUserDto userDto);
