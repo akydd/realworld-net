@@ -1,5 +1,7 @@
 # realworld-net
 
+[![CI](https://github.com/akydd/realworld-net/actions/workflows/dotnet-integration-tests.yaml/badge.svg)](https://github.com/akydd/realworld-net/actions/workflows/dotnet-integration-tests.yaml)
+
 A backend implementation of the [RealWorld](https://realworld-docs.netlify.app/) ("Conduit") API spec, built with **ASP.NET Core on .NET 10**. RealWorld is a Medium.com-style blogging platform — users, profiles with following, articles with slugs and favorites — used as a reference spec for exercising a framework end to end.
 
 > **Status: in progress.** The users, profiles, and articles feature sets are implemented (including auth, following, and favorites). Comments, tags, and the personal feed are not yet built — see [Implementation status](#implementation-status).
@@ -48,7 +50,7 @@ dotnet user-secrets set "JwtSettings:Secret" "<a-long-random-key>" --project src
 The suite is **integration tests**: each service is exercised against a real SQL Server instance that [Testcontainers](https://testcontainers.com/) spins up in Docker automatically. **Docker must be running**, but no manual database setup is needed — the tests create, migrate, and tear down their own throwaway container. You do *not* need the `docker compose` SQL Server from above; the tests manage their own.
 
 ```bash
-dotnet test        # from the repo root — runs the full suite (35 tests)
+dotnet test        # from the repo root — runs the full suite (38 tests)
 ```
 
 Run a single class or a single test with `--filter`:
@@ -62,7 +64,9 @@ Notes:
 - All DB tests share **one** SQL Server container for the run and reset state between tests with [Respawn](https://github.com/jbogard/Respawn), so they execute sequentially and in isolation.
 - The **first run is slow** — Docker pulls the SQL Server image and boots the container (noticeably slower on Apple Silicon, where the image runs under emulation). Later runs reuse the cached image.
 
-Current coverage: `ArticleServiceTests` (13), `ProfileServiceTests` (10), `UserServiceTests` (12) — covering happy paths, not-found/authorization failures, idempotency (favorite/follow), and concurrency via the DB constraints.
+Current coverage: `ArticleServiceTests` (18), `ProfileServiceTests` (10), `UserServiceTests` (10) — covering happy paths, not-found/authorization failures, idempotency (favorite/follow), and concurrency via the DB constraints.
+
+CI runs this same suite (real SQL Server via Testcontainers) on every push and pull request — see the badge at the top and the [workflow](.github/workflows/dotnet-integration-tests.yaml).
 
 ## API
 
@@ -129,5 +133,4 @@ The token returned to clients is **not** a DB column — it's derived per reques
 
 - Personal feed (`GET /api/articles/feed`) over followed authors
 - Comments and tags
-- CI workflow (build + `dotnet format` check + `dotnet test`)
 - End-to-end HTTP tests via `WebApplicationFactory` (the current suite covers the service layer)
